@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project >
+
+
+<target name="-debug-obfuscation-check">
+    <!-- proguard is never enabled in debug mode, but we need it -->
+    <property name="proguard.enabled" value="true"/>
+
+    <!-- See http://stackoverflow.com/questions/16559723/is-it-possible-to-use-proguard-in-debug-mode -->
+    <path id="out.dex.jar.input.ref" />
+</target>
+
+</project>
