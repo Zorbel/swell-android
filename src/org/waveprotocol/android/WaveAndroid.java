@@ -24,8 +24,10 @@ public class WaveAndroid extends Activity
         setContentView(R.layout.main);
 
         final Context context = getApplicationContext();
+        
+        // Put the "User" and "Password" for the login on the first two parameters of startSession
 
-    	waveClient.startSession("jaimeram","jaimeram", "http://localhost:8080", new Callback<String, String>() {
+    	waveClient.startSession("tim","tim", "http://localhost:8080", new Callback<String, String>() { //
 
 			@Override
 			public void onSuccess(String result) {
