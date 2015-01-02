@@ -18,13 +18,14 @@ public class WaveAndroid extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-
+    	
+    	waveClient = new WaveAndroidClient(); 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
         final Context context = getApplicationContext();
 
-    	waveClient.startSession("tim","tim", "http://localhost:8080", new Callback<String, String>() {
+    	waveClient.startSession("jaimeram","jaimeram", "http://localhost:8080", new Callback<String, String>() {
 
 			@Override
 			public void onSuccess(String result) {
