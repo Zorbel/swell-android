@@ -27,7 +27,7 @@ public class WaveAndroid extends Activity
         
         // Put the "User" and "Password" for the login on the first two parameters of startSession
 
-    	waveClient.startSession("tim","tim", "http://localhost:8080", new Callback<String, String>() { //
+    	waveClient.startSession("tim","tim", "http://localhost:9898", new Callback<String, String>() { //
 
 			@Override
 			public void onSuccess(String result) {

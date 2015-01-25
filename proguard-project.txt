@@ -43,6 +43,9 @@
 -dontwarn java.lang.management.GarbageCollectorMXBean
 -dontwarn org.w3c.dom.Node
 
+# WAsync dev dependencies needed to ignore
+-dontwarn org.atmosphere.wasync.**
+
 -keepclasseswithmembers public class * {
     public static void main(java.lang.String[]);
 }

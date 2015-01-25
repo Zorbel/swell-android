@@ -240,13 +240,10 @@ public class WaveAndroidClient {
 
     log.log(Level.INFO, "Starting wave session...");
 
-    // this is needed to atmosphere to work
-    setWebsocketAddress(this.waveServerURL);
-
     String webSocketURL = waveServerURLSchema.equals("http://") ? "ws://" : "wss://";
     webSocketURL += waveServerURL + "/";
 
-    websocket = new WaveWebSocketClient(websocketNotAvailable(), webSocketURL);
+    websocket = new WaveWebSocketClient(true, webSocketURL);
     websocket.connect();
 
     channel = new RemoteViewServiceMultiplexer(websocket, loggedInUser.getAddress());
@@ -282,14 +279,6 @@ public class WaveAndroidClient {
 
   }
 
-
-  private native boolean websocketNotAvailable() /*-{
-                                                 return !window.WebSocket
-                                                 }-*/;
-
-  private native void setWebsocketAddress(String address) /*-{
-                                                          $wnd.__websocket_address = address;
-                                                          }-*/;
 
 
   /*******************************************************************************************/
