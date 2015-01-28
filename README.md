@@ -10,7 +10,7 @@ Web application developed with GWT.
 
 - Configure and run an AVD with Android 4.0
 - Build the debug apk `ant clean debug`
-- Deploy the app running `adb install bin/WaveClient-debug.apk
+- Deploy the app running `adb install bin/WaveClient-debug.apk`
 - Use Eclipse LogCat & DDMS
 
 More info `http://developer.android.com/tools/building/building-cmdline.html`
@@ -105,10 +105,6 @@ This avoids the 65K methods limit problem of the Dalvik VM. See following refere
 
 
 
-
-
-
-
 The Android project has been create with the following command:
 
 ```
@@ -118,4 +114,13 @@ The Android project has been create with the following command:
 --activity WaveAndroid \
 --package org.waveprotocol.android
 ```
+
+
+### Dependencies
+
+WAsync-1.4.3 - Atmosphere Client
+Async-Http-Client-18.14 - Asynchronous Http Client
+
+
+
 

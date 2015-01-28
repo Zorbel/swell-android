@@ -12,86 +12,97 @@ import org.atmosphere.wasync.impl.AtmosphereClient;
 
 import android.util.Log;
 
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProvider;
+
 public class WaveSocketWAsync implements WaveSocket {
 
-	
-	private final AtmosphereClient client;
-	@SuppressWarnings("rawtypes")
-	private final RequestBuilder requestBuilder;
-	private final Socket socket;
-	
-	public WaveSocketWAsync(final WaveSocket.WaveSocketCallback callback, String urlBase) {
-		this.client =  ClientFactory.getDefault().newClient(AtmosphereClient.class);
-		
-		this.requestBuilder = client.newRequestBuilder()
-				.method(Request.METHOD.GET)
-				.trackMessageLength(true)
+  private final AtmosphereClient client;
+  @SuppressWarnings("rawtypes")
+  private final RequestBuilder requestBuilder;
+  private final Socket socket;
+
+  public WaveSocketWAsync(final WaveSocket.WaveSocketCallback callback, String urlBase) {
+    this.client = ClientFactory.getDefault().newClient(AtmosphereClient.class);
+
+    this.requestBuilder = client.newRequestBuilder().method(Request.METHOD.GET)
+        .trackMessageLength(true)
                 .uri(urlBase)
                 .transport(Request.TRANSPORT.WEBSOCKET);
-		
-		this.socket = client.create()
-				.on(Event.OPEN.name(), new Function<String>() {
+    /*
+     * Configure the Grizzly provider in the Async Http Client: <a href=
+     * 'http://github.com/Atmosphere/wasync/wiki/Configuring-the-underlying-AHC-provider'>configure
+     * AHC</a>
+     */
 
-					@Override
-					public void on(String arg0) {
-						callback.onConnect();
-					}
-					
-				}).on(Event.CLOSE.name(), new Function<String>() {
+    // TODO (pablojan) Check if Grizzly can be replaced with Apache Http Client
+    // since it's already provided in Android
 
-					@Override
-					public void on(String arg0) {
-						callback.onDisconnect();
-					}
-					
-				}).on(Event.MESSAGE.name(), new Function<String>() {
+    AsyncHttpClientConfig ahcConfig = new AsyncHttpClientConfig.Builder().build();
+    AsyncHttpClient ahc = new AsyncHttpClient(new GrizzlyAsyncHttpProvider(ahcConfig));
 
-					@Override
-					public void on(String msg) {
-						callback.onMessage(msg);
-					}
-					
-				}).on(new Function<Throwable>() {
+    this.socket = client.create(client.newOptionsBuilder().runtime(ahc).build())
+        .on(Event.OPEN.name(), new Function<String>() {
 
-		            @Override
-		            public void on(Throwable t) {
-		            	Log.d("WebSocket ERROR", "Error during the socket creation");
-		                t.printStackTrace();
-		            }
+      @Override
+      public void on(String arg0) {
+        callback.onConnect();
+      }
 
-		        });
-		
-		
-		
-	}
-	
-	@Override
-	public void connect() {
-		try {
-			
-			socket.open(this.requestBuilder.build());
-		
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+    }).on(Event.CLOSE.name(), new Function<String>() {
 
-	@Override
-	public void disconnect() {
-		socket.close();
-	}
+      @Override
+      public void on(String arg0) {
+        callback.onDisconnect();
+      }
+
+    }).on(Event.MESSAGE.name(), new Function<String>() {
+
+      @Override
+      public void on(String msg) {
+        callback.onMessage(msg);
+      }
+
+    }).on(new Function<Throwable>() {
+
+      @Override
+      public void on(Throwable t) {
+        Log.d("WebSocket ERROR", "Error during the socket creation");
+        t.printStackTrace();
+      }
+
+    });
+
+  }
+
+  @Override
+  public void connect() {
+    try {
+
+      socket.open(this.requestBuilder.build());
+
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+  }
+
+  @Override
+  public void disconnect() {
+    socket.close();
+  }
 
 
-	
-	@Override
-	public void sendMessage(String message) {
-		try {
-			socket.fire(message);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+
+  @Override
+  public void sendMessage(String message) {
+    try {
+      socket.fire(message);
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+  }
 
 }

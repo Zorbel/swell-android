@@ -43,8 +43,27 @@
 -dontwarn java.lang.management.GarbageCollectorMXBean
 -dontwarn org.w3c.dom.Node
 
-# WAsync dev dependencies needed to ignore
--dontwarn org.atmosphere.wasync.**
+
+
+
+# WAsync + AHC dependencies
+# TODO Check if Grizzly can be replaced with Apache Http Client
+# For WAsync 1.4.3
+-dontwarn com.ning.http.client.providers.**
+-dontwarn com.ning.http.util.**
+
+
+# Grizzly
+-dontwarn com.ning.http.client.providers.netty.**
+-dontwarn com.ning.http.client.providers.jdk.**
+-dontwarn org.glassfish.grizzly.http.server.**
+-dontwarn org.glassfish.grizzly.servlet.**
+-dontwarn org.glassfish.grizzly.websockets.glassfish.**
+-dontwarn org.glassfish.grizzly.websockets.**
+-dontwarn com.ning.http.util.DefaultHostnameVerifier
+-dontwarn com.google.common.util.concurrent.ServiceManager
+-dontwarn java.nio.**
+-dontwarn java.util.**
 
 -keepclasseswithmembers public class * {
     public static void main(java.lang.String[]);
