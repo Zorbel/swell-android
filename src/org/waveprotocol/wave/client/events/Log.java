@@ -19,13 +19,14 @@
 
 package org.waveprotocol.wave.client.events;
 
-import org.waveprotocol.wave.client.events.DebugMessageEvent.Severity;
-
 /**
  * Created by IntelliJ IDEA. User: arb Date: May 13, 2010 Time: 9:35:04 PM To
  * change this template use File | Settings | File Templates.
  */
 public class Log {
+	
+  private static final String InfoTag = "WAVE_LOG";
+	
   public Log(Class<? extends Object> clazz) {
   }
 
@@ -34,17 +35,20 @@ public class Log {
   }
 
   public void info(String message) {
-    ClientEvents.get().fireEvent(
-        new DebugMessageEvent(Severity.INFO, message, null));
+//    ClientEvents.get().fireEvent(
+//        new DebugMessageEvent(Severity.INFO, message, null));
+	  android.util.Log.i(InfoTag, message);
   }
 
   public void severe(String message) {
-    ClientEvents.get().fireEvent(
-        new DebugMessageEvent(Severity.SEVERE, message, null));
+//    ClientEvents.get().fireEvent(
+//        new DebugMessageEvent(Severity.SEVERE, message, null));
+	  android.util.Log.e(InfoTag, message);
   }
 
   public void severe(String message, Throwable t) {
-    ClientEvents.get().fireEvent(
-        new DebugMessageEvent(Severity.SEVERE, message, t));
+//    ClientEvents.get().fireEvent(
+//        new DebugMessageEvent(Severity.SEVERE, message, t));
+	  android.util.Log.e(InfoTag, message, t);
   }
 }
