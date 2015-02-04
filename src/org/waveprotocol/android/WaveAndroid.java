@@ -2,45 +2,68 @@ package org.waveprotocol.android;
 
 import org.waveprotocol.android.client.WaveAndroidClient;
 
-import com.google.gwt.core.client.Callback;
-
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Bundle;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
-public class WaveAndroid extends Activity
-{
+import com.google.gwt.core.client.Callback;
+
+public class WaveAndroid extends Activity implements OnClickListener {
 
 	private WaveAndroidClient waveClient;
 
-    /** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
-    	
-    	waveClient = new WaveAndroidClient(); 
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+	/** Called when the activity is first created. */
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		waveClient = new WaveAndroidClient();
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
+		Button butttonLogin = (Button) findViewById(R.id.buttonLogin);
+		butttonLogin.setOnClickListener(this);
+	}
 
-        final Context context = getApplicationContext();
-        
-        // Put the "User" and "Password" for the login on the first two parameters of startSession
+	@Override
+	public void onClick(View arg0) {
+		EditText eUser = (EditText) findViewById(R.id.editTextUser);
+		EditText ePassword = (EditText) findViewById(R.id.editTextPassword);
+		EditText eServer = (EditText) findViewById(R.id.editTextServer);
 
-    	waveClient.startSession("tim","tim", "http://localhost:9898", new Callback<String, String>() { //
+		String user = eUser.getText().toString();
+		String pass = ePassword.getText().toString();
+		String server = eServer.getText().toString();
+		
+		final Context context = getApplicationContext();
 
-			@Override
-			public void onSuccess(String result) {
+		if (!user.isEmpty() && !pass.isEmpty() && !server.isEmpty()) {
+			
+			waveClient.startSession(user, pass, server,
+					new Callback<String, String>() {
 
-				Toast.makeText(context, "Connected to Wave server with session Id: "+result , Toast.LENGTH_LONG).show();
-			}
+						@Override
+						public void onSuccess(String result) {
 
-			@Override
-			public void onFailure(String reason) {
+							Toast.makeText(context, "Connected to Wave server with session Id: " + result, Toast.LENGTH_LONG).show();
+						}
 
-				Toast.makeText(context, "Failed Wave server connection: "+reason , Toast.LENGTH_LONG).show();
-			}
-		});
+						@Override
+						public void onFailure(String reason) {
 
-    }
+							Toast.makeText(context,
+									"Failed Wave server connection: " + reason, Toast.LENGTH_LONG).show();
+						}
+					});
+		}
+		
+		else {
+			AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+			alertDialog.setMessage("You must complete all fields");
+			alertDialog.show();
+		}
+	}
 }

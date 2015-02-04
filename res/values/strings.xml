@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="app_name">WaveAndroid</string>
+    <string name="server">Server</string>
+    <string name="user">User</string>
+    <string name="password">Password</string>
+
+    <color name="white">#FFFFFF</color>
+
 </resources>
