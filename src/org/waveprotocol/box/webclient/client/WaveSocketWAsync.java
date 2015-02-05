@@ -41,7 +41,7 @@ public class WaveSocketWAsync implements WaveSocket {
     // since it's already provided in Android
 
     AsyncHttpClientConfig ahcConfig = new AsyncHttpClientConfig.Builder().build();
-    AsyncHttpClient ahc = new AsyncHttpClient(new ApacheAsyncHttpProvider(ahcConfig));
+    AsyncHttpClient ahc = new AsyncHttpClient(new GrizzlyAsyncHttpProvider(ahcConfig));
 
     this.socket = client.create(client.newOptionsBuilder().runtime(ahc).build())
         .on(Event.OPEN.name(), new Function<String>() {
