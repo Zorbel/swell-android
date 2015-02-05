@@ -16,13 +16,15 @@ public class WaveAndroidSession extends Activity {
 	private String server;
 	private WaveAndroidClient waveClient;
 
-	final Context context = getApplicationContext();
+	private Context context;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.session);
 		this.getUserData();
+		
+		this.context = getApplicationContext();
 
 		waveClient = new WaveAndroidClient();
 		waveClient.startSession(user, password, server,
@@ -46,7 +48,7 @@ public class WaveAndroidSession extends Activity {
 	private void getUserData() {
 		Bundle extras = getIntent().getExtras();
 		this.user = extras.getString("user");
-		this.password = extras.getString("password");
+		this.password = extras.getString("pass");
 		this.server = extras.getString("server");
 	}
 
