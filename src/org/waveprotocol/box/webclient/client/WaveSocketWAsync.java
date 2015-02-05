@@ -14,6 +14,7 @@ import android.util.Log;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.providers.apache.ApacheAsyncHttpProvider;
 import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProvider;
 
 public class WaveSocketWAsync implements WaveSocket {
@@ -40,7 +41,7 @@ public class WaveSocketWAsync implements WaveSocket {
     // since it's already provided in Android
 
     AsyncHttpClientConfig ahcConfig = new AsyncHttpClientConfig.Builder().build();
-    AsyncHttpClient ahc = new AsyncHttpClient(new GrizzlyAsyncHttpProvider(ahcConfig));
+    AsyncHttpClient ahc = new AsyncHttpClient(new ApacheAsyncHttpProvider(ahcConfig));
 
     this.socket = client.create(client.newOptionsBuilder().runtime(ahc).build())
         .on(Event.OPEN.name(), new Function<String>() {
