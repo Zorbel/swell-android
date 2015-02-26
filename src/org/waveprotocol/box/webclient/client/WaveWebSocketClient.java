@@ -26,10 +26,7 @@ import static org.waveprotocol.wave.communication.gwt.JsonHelper.setPropertyAsIn
 import static org.waveprotocol.wave.communication.gwt.JsonHelper.setPropertyAsObject;
 import static org.waveprotocol.wave.communication.gwt.JsonHelper.setPropertyAsString;
 
-import com.google.common.base.Preconditions;
-import com.google.gwt.core.client.Scheduler;
-import com.google.gwt.core.client.Scheduler.RepeatingCommand;
-import com.google.gwt.user.client.Cookies;
+import java.util.Queue;
 
 import org.waveprotocol.box.common.comms.jso.ProtocolAuthenticateJsoImpl;
 import org.waveprotocol.box.common.comms.jso.ProtocolOpenRequestJsoImpl;
@@ -47,7 +44,8 @@ import org.waveprotocol.wave.communication.json.JsonException;
 import org.waveprotocol.wave.model.util.CollectionUtils;
 import org.waveprotocol.wave.model.util.IntMap;
 
-import java.util.Queue;
+import com.google.common.base.Preconditions;
+import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 
 
 /**
@@ -97,7 +95,7 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
     }
   }
 
-  private WaveSocket socket;
+  private WaveSocket socket = null;
   private final IntMap<SubmitResponseCallback> submitRequestCallbacks;
 
   /**
@@ -117,30 +115,34 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
   private final RepeatingCommand reconnectCommand = new RepeatingCommand() {
     @Override
     public boolean execute() {
-      if (!connectedAtLeastOnce && !websocketNotAvailable && connectTry > MAX_INITIAL_FAILURES) {
-        // Let's try to use websocket alternative, seems that websocket it's not working
-        // (we are under a proxy or similar)
-        socket = WaveSocketFactory.create(true, urlBase, WaveWebSocketClient.this);
-      }
-      connectTry++;
-      if (connected == ConnectState.DISCONNECTED) {
-        LOG.info("Attemping to reconnect");
-        connected = ConnectState.CONNECTING;
-        socket.connect();
-      }
+      // if (!connectedAtLeastOnce && !websocketNotAvailable && connectTry >
+      // MAX_INITIAL_FAILURES) {
+      // // Let's try to use websocket alternative, seems that websocket it's
+      // not working
+      // // (we are under a proxy or similar)
+      // socket = WaveSocketFactory.create(true, urlBase,
+      // WaveWebSocketClient.this);
+      // }
+      // connectTry++;
+      // if (connected == ConnectState.DISCONNECTED) {
+      // LOG.info("Attemping to reconnect");
+      // connected = ConnectState.CONNECTING;
+      // socket.connect();
+      // }
       return true;
     }
   };
-  private final boolean websocketNotAvailable;
+
   private boolean connectedAtLeastOnce = false;
   private long connectTry = 0;
   private final String urlBase;
+  private final String httpSessionId;
 
-  public WaveWebSocketClient(boolean websocketNotAvailable, String urlBase) {
-    this.websocketNotAvailable = websocketNotAvailable;
+  public WaveWebSocketClient(String urlBase, String httpSessionId) {
+    this.httpSessionId = httpSessionId;
     this.urlBase = urlBase;
     submitRequestCallbacks = CollectionUtils.createIntMap();
-    socket = WaveSocketFactory.create(websocketNotAvailable, urlBase, this);
+    socket = WaveSocketFactory.create(false, urlBase, httpSessionId, this);
   }
 
   /**
@@ -158,8 +160,20 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
    * Opens this connection.
    */
   public void connect() {
-    reconnectCommand.execute();
-    Scheduler.get().scheduleFixedDelay(reconnectCommand, RECONNECT_TIME_MS);
+
+    if (socket == null) {
+      socket = WaveSocketFactory.create(true, urlBase, httpSessionId, WaveWebSocketClient.this);
+    }
+
+    connectTry++;
+    if (connected == ConnectState.DISCONNECTED) {
+      LOG.info("Attemping to reconnect");
+      connected = ConnectState.CONNECTING;
+      socket.connect();
+    }
+
+    // reconnectCommand.execute();
+    // Scheduler.get().scheduleFixedDelay(reconnectCommand, RECONNECT_TIME_MS);
   }
 
   @Override
@@ -169,10 +183,10 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
 
     // Sends the session cookie to the server via an RPC to work around browser bugs.
     // See: http://code.google.com/p/wave-protocol/issues/detail?id=119
-    String token = Cookies.getCookie(JETTY_SESSION_TOKEN_NAME);
-    if (token != null) {
+
+    if (httpSessionId != null) {
       ProtocolAuthenticateJsoImpl auth = ProtocolAuthenticateJsoImpl.create();
-      auth.setToken(token);
+      auth.setToken(httpSessionId);
       send(MessageWrapper.create(sequenceNo++, "ProtocolAuthenticate", auth));
     }
 

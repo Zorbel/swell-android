@@ -37,8 +37,9 @@ public class WaveSocketFactory {
    * wrapped.
    */
   public static WaveSocket create(boolean useWebSocketAlt, final String urlBase,
+      final String sessionId,
       final WaveSocket.WaveSocketCallback callback) {
-    
-      return new WaveSocketWAsync(callback, urlBase);
+
+    return new WaveSocketWAsync(callback, urlBase, sessionId);
   }
 }

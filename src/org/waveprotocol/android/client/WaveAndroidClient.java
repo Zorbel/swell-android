@@ -127,89 +127,102 @@ public class WaveAndroidClient {
   private void login(final String user, final String password,
       final Callback<String, String> callback) {
 
-	  final ParticipantId participantId = ParticipantId.ofUnsafe(user + "@" + this.waveServerDomain);
+    final ParticipantId participantId = ParticipantId.ofUnsafe(user + "@" + this.waveServerDomain);
 
-	    
-	    String url = "http://wave.p2pvalue.eu/auth/signin?r=none"; //Stablishing the url of the wave server. 
-	    //"r=none" -> parameter that indicates the server not to send a blank html page as a response to the request
-	    
-	    
-	    // Using the Apache HTTP library included in the Android Default API (org.apache.http)
-	    HttpClient clienthttp = new DefaultHttpClient(); //Http client in charge of handling the http comunication
-	    
-	    HttpPost post = new HttpPost(url); //The post that will be sent to the wave server
-	      
-	    
-	    try {
-	    	
-	    	 // Allow cookie headers, and so Wave session can be set
-//	      builder.setIncludeCredentials(true);
-	    		
-	    	post.addHeader("Content-Type", "application/x-www-form-urlencoded");
-	    	
-	    	//Include the required login information in the post header
-	    	List<NameValuePair> nameValuePair = new ArrayList<NameValuePair>();
-	    	nameValuePair.add(new BasicNameValuePair("address", user + "@prototype.p2pvalue.eu")); 
-	    	nameValuePair.add(new BasicNameValuePair("password", password));
-	    	nameValuePair.add(new BasicNameValuePair("signIn", "Sign+in"));
-	    	post.setEntity(new UrlEncodedFormEntity(nameValuePair));
-	    	   	
-	    	// Execute HTTP Post Request
-	        ResponseHandler<String> responseHandler=new BasicResponseHandler();
-	        
-	        String response = clienthttp.execute(post, new BasicResponseHandler() {
-	        	@Override
-	        	public String handleResponse(HttpResponse response)
-	        			throws HttpResponseException, IOException {
-	        		
-	        		// TODO fix Wave auth server to do not make redirects
-//	              // xmlHTTTPResquest object doesn't handle 302 properly
-	        		
-	        		//See the actual response in the log (in html format) 
-	                //Log.d("HTTP RESPONSE", response); 
-	        		
-	        		if (response.getStatusLine().getStatusCode() == 200) { //Code 200 means that the connection was successful
-	        			
-	        			loggedInUser = participantId;
-	        			
-//	                  // This fakes the former Wave Client JS session object.
-//	                  String sessionId = Cookies.getCookie(SESSION_COOKIE_NAME);
-	      //
-////	                  createWebClientSession(WaveAndroidClient.this.waveServerDomain, participantId.getAddress(),
-////	                      sessionId);
-	      //
-//	                  callback.onSuccess(sessionId);
-	        			
-	        			Log.d("HTTP SUCCESS", "Wave login succesfull for: " + user);
-	        			Log.d("HTTP SUCCESS", "Wave user info: " + response.getStatusLine().getReasonPhrase());
-	       			
-	        			callback.onSuccess(null);
-	        			 
-	        		} else { //Code != 200 means that the connection was wrong
-	        			
-	        			loggedInUser = null;
-	        			
-	        			Log.d("HTTP ERROR", "Error calling wave login servlet: " + response.getStatusLine().getReasonPhrase());
-	        			
-	        			callback.onFailure("Error calling wave login servlet: " + response.getStatusLine().getReasonPhrase());
-	        		}
-	        		
-	        		return super.handleResponse(response);
-	        	}
-	        }); 
+    String url = "http://wave.p2pvalue.eu/auth/signin?r=none"; // Stablishing
+                                                               // the url of the
+                                                               // wave server.
+    // "r=none" -> parameter that indicates the server not to send a blank html
+    // page as a response to the request
 
-	    } catch (ClientProtocolException e) {
-	    	
-	    	Log.w("HTTP ERROR", "Error calling wave login servlet: protocol");
-	    	callback.onFailure(e.getMessage());
-	    	
-		} catch (IOException e) {
-			
-			Log.w("HTTP ERROR", "Error calling wave login servlet: IO");
-	    	callback.onFailure(e.getMessage());
-		}
+    // Using the Apache HTTP library included in the Android Default API
+    // (org.apache.http)
+    HttpClient clienthttp = new DefaultHttpClient(); // Http client in charge of
+                                                     // handling the http
+                                                     // comunication
 
-	  }
+    HttpPost post = new HttpPost(url); // The post that will be sent to the wave
+                                       // server
+
+    try {
+
+      // Allow cookie headers, and so Wave session can be set
+      // builder.setIncludeCredentials(true);
+
+      post.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+      // Include the required login information in the post header
+      List<NameValuePair> nameValuePair = new ArrayList<NameValuePair>();
+      nameValuePair.add(new BasicNameValuePair("address", user + "@prototype.p2pvalue.eu"));
+      nameValuePair.add(new BasicNameValuePair("password", password));
+      nameValuePair.add(new BasicNameValuePair("signIn", "Sign+in"));
+      post.setEntity(new UrlEncodedFormEntity(nameValuePair));
+
+      // Execute HTTP Post Request
+      ResponseHandler<String> responseHandler = new BasicResponseHandler();
+
+      String response = clienthttp.execute(post, new BasicResponseHandler() {
+        @Override
+        public String handleResponse(HttpResponse response) throws HttpResponseException,
+            IOException {
+
+          // TODO fix Wave auth server to do not make redirects
+          // // xmlHTTTPResquest object doesn't handle 302 properly
+
+          // See the actual response in the log (in html format)
+          // Log.d("HTTP RESPONSE", response);
+
+          if (response.getStatusLine().getStatusCode() == 200) { // Code 200
+                                                                 // means that
+                                                                 // the
+                                                                 // connection
+                                                                 // was
+                                                                 // successful
+
+            loggedInUser = participantId;
+
+            // // This fakes the former Wave Client JS session object.
+            // String sessionId = Cookies.getCookie(SESSION_COOKIE_NAME);
+            //
+            // //
+            // createWebClientSession(WaveAndroidClient.this.waveServerDomain,
+            // participantId.getAddress(),
+            // // sessionId);
+            //
+            // callback.onSuccess(sessionId);
+
+            Log.d("HTTP SUCCESS", "Wave login succesfull for: " + user);
+            Log.d("HTTP SUCCESS", "Wave user info: " + response.getStatusLine().getReasonPhrase());
+
+            callback.onSuccess(null);
+
+          } else { // Code != 200 means that the connection was wrong
+
+            loggedInUser = null;
+
+            Log.d("HTTP ERROR", "Error calling wave login servlet: "
+                + response.getStatusLine().getReasonPhrase());
+
+            callback.onFailure("Error calling wave login servlet: "
+                + response.getStatusLine().getReasonPhrase());
+          }
+
+          return super.handleResponse(response);
+        }
+      });
+
+    } catch (ClientProtocolException e) {
+
+      Log.w("HTTP ERROR", "Error calling wave login servlet: protocol");
+      callback.onFailure(e.getMessage());
+
+    } catch (IOException e) {
+
+      Log.w("HTTP ERROR", "Error calling wave login servlet: IO");
+      callback.onFailure(e.getMessage());
+    }
+
+  }
 
 // This JSNI method is not usable in Android
 
@@ -243,7 +256,7 @@ public class WaveAndroidClient {
     String webSocketURL = waveServerURLSchema.equals("http://") ? "ws://" : "wss://";
     webSocketURL += waveServerURL + "/";
 
-    websocket = new WaveWebSocketClient(true, webSocketURL);
+    // websocket = new WaveWebSocketClient(true, webSocketURL);
     websocket.connect();
 
     channel = new RemoteViewServiceMultiplexer(websocket, loggedInUser.getAddress());
