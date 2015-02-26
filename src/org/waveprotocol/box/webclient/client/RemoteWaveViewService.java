@@ -19,15 +19,19 @@
 
 package org.waveprotocol.box.webclient.client;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.waveprotocol.box.common.comms.DocumentSnapshot;
 import org.waveprotocol.box.common.comms.ProtocolSubmitResponse;
 import org.waveprotocol.box.common.comms.ProtocolWaveletUpdate;
 import org.waveprotocol.box.common.comms.WaveletSnapshot;
-import org.waveprotocol.box.common.comms.jso.ProtocolSubmitRequestJsoImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolSubmitRequestGsonImpl;
 import org.waveprotocol.box.common.comms.jso.ProtocolWaveletUpdateJsoImpl;
+import org.waveprotocol.box.stat.AsyncCallContext;
 import org.waveprotocol.box.webclient.common.WaveletOperationSerializer;
 import org.waveprotocol.wave.client.common.util.ClientPercentEncoderDecoder;
 import org.waveprotocol.wave.client.events.Log;
@@ -57,12 +61,8 @@ import org.waveprotocol.wave.model.wave.data.DocumentFactory;
 import org.waveprotocol.wave.model.wave.data.ObservableWaveletData;
 import org.waveprotocol.wave.model.wave.data.impl.WaveletDataImpl;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.waveprotocol.box.stat.AsyncCallContext;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * Implements the {@link WaveViewService} using RPCs.
@@ -252,7 +252,7 @@ public final class RemoteWaveViewService implements WaveViewService, WaveWebSock
   @Override
   public String viewSubmit(final WaveletName wavelet, WaveletDelta delta, String channelId,
       final SubmitCallback callback) {
-    ProtocolSubmitRequestJsoImpl submitRequest = ProtocolSubmitRequestJsoImpl.create();
+    ProtocolSubmitRequestGsonImpl submitRequest = new ProtocolSubmitRequestGsonImpl();
     submitRequest.setWaveletName(serialize(wavelet));
     submitRequest.setDelta(serialize(wavelet, delta));
     submitRequest.setChannelId(channelId);

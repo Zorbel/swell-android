@@ -19,32 +19,27 @@
 
 package org.waveprotocol.box.webclient.client;
 
-import static org.waveprotocol.wave.communication.gwt.JsonHelper.getPropertyAsInteger;
-import static org.waveprotocol.wave.communication.gwt.JsonHelper.getPropertyAsObject;
-import static org.waveprotocol.wave.communication.gwt.JsonHelper.getPropertyAsString;
-import static org.waveprotocol.wave.communication.gwt.JsonHelper.setPropertyAsInteger;
-import static org.waveprotocol.wave.communication.gwt.JsonHelper.setPropertyAsObject;
-import static org.waveprotocol.wave.communication.gwt.JsonHelper.setPropertyAsString;
-
 import java.util.Queue;
 
-import org.waveprotocol.box.common.comms.jso.ProtocolAuthenticateJsoImpl;
-import org.waveprotocol.box.common.comms.jso.ProtocolOpenRequestJsoImpl;
-import org.waveprotocol.box.common.comms.jso.ProtocolSubmitRequestJsoImpl;
-import org.waveprotocol.box.common.comms.jso.ProtocolSubmitResponseJsoImpl;
-import org.waveprotocol.box.common.comms.jso.ProtocolWaveletUpdateJsoImpl;
+import org.waveprotocol.android.service.ProtoSerializer;
+import org.waveprotocol.box.common.comms.gson.ProtocolAuthenticateGsonImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolOpenRequestGsonImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolSubmitRequestGsonImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolSubmitResponseGsonImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolWaveletUpdateGsonImpl;
 import org.waveprotocol.box.stat.Timer;
 import org.waveprotocol.box.stat.Timing;
-import org.waveprotocol.wave.client.events.ClientEvents;
 import org.waveprotocol.wave.client.events.Log;
-import org.waveprotocol.wave.client.events.NetworkStatusEvent;
-import org.waveprotocol.wave.client.events.NetworkStatusEvent.ConnectionStatus;
-import org.waveprotocol.wave.communication.gwt.JsonMessage;
-import org.waveprotocol.wave.communication.json.JsonException;
+import org.waveprotocol.wave.communication.gson.GsonException;
 import org.waveprotocol.wave.model.util.CollectionUtils;
 import org.waveprotocol.wave.model.util.IntMap;
 
 import com.google.common.base.Preconditions;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 
 
@@ -67,31 +62,37 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
    * <p>
    * Note that this message can not be described by a protobuf, because it
    * contains an arbitrary protobuf, which breaks the protobuf typing rules.
+   *
+   * Pure-java version copied from server's WebSocketChannel
    */
-  private static final class MessageWrapper extends JsonMessage {
-    static MessageWrapper create(int seqno, String type, JsonMessage message) {
-      MessageWrapper wrapper = JsonMessage.createJsonMessage().cast();
-      setPropertyAsInteger(wrapper, "sequenceNumber", seqno);
-      setPropertyAsString(wrapper, "messageType", type);
-      setPropertyAsObject(wrapper, "message", message);
-      return wrapper;
+  private static class MessageWrapper {
+    private final static JsonParser parser = new JsonParser();
+
+    final int sequenceNumber;
+    final String messageType;
+    final JsonElement message;
+
+    public MessageWrapper(int sequenceNumber, String messageType, JsonElement message) {
+      this.sequenceNumber = sequenceNumber;
+      this.messageType = messageType;
+      this.message = message;
     }
 
-    @SuppressWarnings("unused") // GWT requires an explicit protected ctor
-    protected MessageWrapper() {
-      super();
+    public static MessageWrapper deserialize(Gson gson, String data) {
+      JsonElement e = parser.parse(data);
+      JsonObject obj = e.getAsJsonObject();
+      String type = obj.get("messageType").getAsString();
+      int seqno = obj.get("sequenceNumber").getAsInt();
+      JsonElement message = obj.get("message");
+      return new MessageWrapper(seqno, type, message);
     }
 
-    int getSequenceNumber() {
-      return getPropertyAsInteger(this, "sequenceNumber");
-    }
-
-    String getType() {
-      return getPropertyAsString(this, "messageType");
-    }
-
-    <T extends JsonMessage> T getPayload() {
-      return getPropertyAsObject(this, "message").<T>cast();
+    public static String serialize(String type, int seqno, JsonElement message) {
+      JsonObject o = new JsonObject();
+      o.add("messageType", new JsonPrimitive(type));
+      o.add("sequenceNumber", new JsonPrimitive(seqno));
+      o.add("message", message);
+      return o.toString();
     }
   }
 
@@ -110,7 +111,7 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
   private WaveWebSocketCallback callback;
   private int sequenceNo;
 
-  private final Queue<JsonMessage> messages = CollectionUtils.createQueue();
+  private final Queue<String> messages = CollectionUtils.createQueue();
 
   private final RepeatingCommand reconnectCommand = new RepeatingCommand() {
     @Override
@@ -138,9 +139,15 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
   private final String urlBase;
   private final String httpSessionId;
 
+  private final Gson gson = new Gson();
+  private final ProtoSerializer serializer;
+
   public WaveWebSocketClient(String urlBase, String httpSessionId) {
     this.httpSessionId = httpSessionId;
     this.urlBase = urlBase;
+
+    serializer = new ProtoSerializer();
+
     submitRequestCallbacks = CollectionUtils.createIntMap();
     socket = WaveSocketFactory.create(false, urlBase, httpSessionId, this);
   }
@@ -185,79 +192,92 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
     // See: http://code.google.com/p/wave-protocol/issues/detail?id=119
 
     if (httpSessionId != null) {
-      ProtocolAuthenticateJsoImpl auth = ProtocolAuthenticateJsoImpl.create();
+      ProtocolAuthenticateGsonImpl auth = new ProtocolAuthenticateGsonImpl();
       auth.setToken(httpSessionId);
-      send(MessageWrapper.create(sequenceNo++, "ProtocolAuthenticate", auth));
+      sendMessage(sequenceNo++, "ProtocolAuthenticate", auth.toGson(null, null));
     }
 
     // Flush queued messages.
     while (!messages.isEmpty() && connected == ConnectState.CONNECTED) {
       send(messages.poll());
     }
-
-    ClientEvents.get().fireEvent(new NetworkStatusEvent(ConnectionStatus.CONNECTED));
   }
 
   @Override
   public void onDisconnect() {
     connected = ConnectState.DISCONNECTED;
-    ClientEvents.get().fireEvent(new NetworkStatusEvent(ConnectionStatus.DISCONNECTED));
   }
 
   @Override
   public void onMessage(final String message) {
-    LOG.info("received JSON message " + message);
+    LOG.info("Received JSON message " + message);
     Timer timer = Timing.start("deserialize message");
     MessageWrapper wrapper;
-    try {
-      wrapper = MessageWrapper.parse(message);
-    } catch (JsonException e) {
-      LOG.severe("invalid JSON message " + message, e);
-      return;
-    } finally {
-      Timing.stop(timer);
-    }
-    String messageType = wrapper.getType();
+    wrapper = MessageWrapper.deserialize(gson, message);
+    Timing.stop(timer);
+
+    String messageType = wrapper.messageType;
     if ("ProtocolWaveletUpdate".equals(messageType)) {
       if (callback != null) {
-        callback.onWaveletUpdate(wrapper.<ProtocolWaveletUpdateJsoImpl>getPayload());
+        ProtocolWaveletUpdateGsonImpl waveletUpdate = new ProtocolWaveletUpdateGsonImpl();
+
+        try {
+          waveletUpdate.fromGson(wrapper.message, gson, null);
+        } catch (GsonException e) {
+          LOG.severe("Error parsing WaveletUpdate JSON message", e);
+          return;
+        }
+        callback.onWaveletUpdate(waveletUpdate);
       }
     } else if ("ProtocolSubmitResponse".equals(messageType)) {
-      int seqno = wrapper.getSequenceNumber();
+      int seqno = wrapper.sequenceNumber;
       SubmitResponseCallback callback = submitRequestCallbacks.get(seqno);
       if (callback != null) {
         submitRequestCallbacks.remove(seqno);
-        callback.run(wrapper.<ProtocolSubmitResponseJsoImpl>getPayload());
+        ProtocolSubmitResponseGsonImpl submitResponse = new ProtocolSubmitResponseGsonImpl();
+        try {
+          submitResponse.fromGson(wrapper.message, gson, null);
+        } catch (GsonException e) {
+          LOG.severe("Error parsing SubmitResponse JSON message", e);
+          return;
+        }
+        callback.run(submitResponse);
       }
     }
   }
 
-  public void submit(ProtocolSubmitRequestJsoImpl message, SubmitResponseCallback callback) {
+  public void submit(ProtocolSubmitRequestGsonImpl message, SubmitResponseCallback callback) {
     int submitId = sequenceNo++;
     submitRequestCallbacks.put(submitId, callback);
-    send(MessageWrapper.create(submitId, "ProtocolSubmitRequest", message));
+    sendMessage(submitId, "ProtocolSubmitRequest", message.toGson(null, null));
   }
 
-  public void open(ProtocolOpenRequestJsoImpl message) {
-    send(MessageWrapper.create(sequenceNo++, "ProtocolOpenRequest", message));
+  public void open(ProtocolOpenRequestGsonImpl message) {
+    sendMessage(sequenceNo++, "ProtocolOpenRequest", message.toGson(null, null));
   }
 
-  private void send(JsonMessage message) {
+
+  private void sendMessage(int sequenceNo, String type, JsonElement message) {
+
+    String json = "";
     switch (connected) {
-      case CONNECTED:
-        Timer timing = Timing.start("serialize message");
-        String json;
-        try {
-          json = message.toJson();
-        } finally {
-          Timing.stop(timing);
-        }
-        LOG.info("Sending JSON data " + json);
-        socket.sendMessage(json);
-        break;
-      default:
-        messages.add(message);
+    case CONNECTED:
+      Timer timing = Timing.start("serialize message");
+      try {
+        json = MessageWrapper.serialize(type, sequenceNo, message);
+      } finally {
+        Timing.stop(timing);
+      }
+      send(json);
+      break;
+    default:
+      messages.add(json);
     }
+  }
+
+  private void send(String json) {
+    LOG.info("Sending JSON data " + json);
+    socket.sendMessage(json);
   }
 
 }

@@ -19,9 +19,11 @@
 
 package org.waveprotocol.box.webclient.client;
 
+import java.util.Map;
+
 import org.waveprotocol.box.common.comms.ProtocolWaveletUpdate;
-import org.waveprotocol.box.common.comms.jso.ProtocolOpenRequestJsoImpl;
-import org.waveprotocol.box.common.comms.jso.ProtocolSubmitRequestJsoImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolOpenRequestGsonImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolSubmitRequestGsonImpl;
 import org.waveprotocol.wave.model.id.IdFilter;
 import org.waveprotocol.wave.model.id.InvalidIdException;
 import org.waveprotocol.wave.model.id.ModernIdSerialiser;
@@ -29,8 +31,6 @@ import org.waveprotocol.wave.model.id.WaveId;
 import org.waveprotocol.wave.model.id.WaveletId;
 import org.waveprotocol.wave.model.id.WaveletName;
 import org.waveprotocol.wave.model.util.CollectionUtils;
-
-import java.util.Map;
 
 /**
  * Distributes the incoming update stream (from wave-in-a-box's client/server
@@ -120,7 +120,7 @@ public final class RemoteViewServiceMultiplexer implements WaveWebSocketCallback
     streams.put(id, stream);
 
     // Request those updates.
-    ProtocolOpenRequestJsoImpl request = ProtocolOpenRequestJsoImpl.create();
+    ProtocolOpenRequestGsonImpl request = new ProtocolOpenRequestGsonImpl();
     request.setWaveId(ModernIdSerialiser.INSTANCE.serialiseWaveId(id));
     request.setParticipantId(userId);
     for (String prefix : filter.getPrefixes()) {
@@ -156,7 +156,7 @@ public final class RemoteViewServiceMultiplexer implements WaveWebSocketCallback
    * @param request delta to submit
    * @param callback callback for submit response
    */
-  public void submit(ProtocolSubmitRequestJsoImpl request, SubmitResponseCallback callback) {
+  public void submit(ProtocolSubmitRequestGsonImpl request, SubmitResponseCallback callback) {
     request.getDelta().setAuthor(userId);
     socket.submit(request, callback);
   }
