@@ -25,8 +25,8 @@ import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 
+import org.waveprotocol.android.service.common.SnapshotSerializer;
 import org.waveprotocol.box.common.comms.jso.WaveViewSnapshotJsoImpl;
-import org.waveprotocol.box.webclient.common.SnapshotSerializer;
 import org.waveprotocol.box.webclient.common.communication.callback.SimpleCallback;
 import org.waveprotocol.wave.client.debug.logger.DomLogger;
 import org.waveprotocol.wave.common.logging.LoggerBundle;

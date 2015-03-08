@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.waveprotocol.box.webclient.client;
+package org.waveprotocol.android.service;
 
 import org.waveprotocol.box.common.comms.ProtocolWaveletUpdate;
 

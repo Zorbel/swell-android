@@ -21,6 +21,7 @@ package org.waveprotocol.box.webclient.client;
 
 import com.google.gwt.dom.client.Element;
 
+import org.waveprotocol.android.service.RemoteViewServiceMultiplexer;
 import org.waveprotocol.box.webclient.search.WaveStore;
 import org.waveprotocol.box.webclient.widget.frame.FramedPanel;
 import org.waveprotocol.wave.client.StageOne;

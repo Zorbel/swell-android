@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.waveprotocol.box.webclient.client;
+package org.waveprotocol.android.service;
 
 /**
  * This interface serves as a proxy interface wrapper for concrete socket implementations

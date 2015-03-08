@@ -22,6 +22,8 @@ package org.waveprotocol.box.webclient.client;
 import com.google.common.base.Preconditions;
 import com.google.gwt.user.client.Command;
 
+import org.waveprotocol.android.service.RemoteViewServiceMultiplexer;
+import org.waveprotocol.android.service.RemoteWaveViewService;
 import org.waveprotocol.wave.client.StageOne;
 import org.waveprotocol.wave.client.StageTwo;
 import org.waveprotocol.wave.client.account.ProfileManager;

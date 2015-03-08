@@ -17,13 +17,15 @@
  * under the License.
  */
 
-package org.waveprotocol.box.webclient.common;
+package org.waveprotocol.android.service.common;
+
+import java.util.Collection;
 
 import org.waveprotocol.box.common.comms.DocumentSnapshot;
 import org.waveprotocol.box.common.comms.WaveViewSnapshot;
 import org.waveprotocol.box.common.comms.WaveletSnapshot;
-import org.waveprotocol.box.common.comms.jso.DocumentSnapshotJsoImpl;
-import org.waveprotocol.box.common.comms.jso.WaveletSnapshotJsoImpl;
+import org.waveprotocol.box.common.comms.gson.DocumentSnapshotGsonImpl;
+import org.waveprotocol.box.common.comms.gson.WaveletSnapshotGsonImpl;
 import org.waveprotocol.wave.model.document.operation.DocInitialization;
 import org.waveprotocol.wave.model.document.operation.DocOp;
 import org.waveprotocol.wave.model.document.operation.impl.DocOpUtil;
@@ -46,18 +48,18 @@ import org.waveprotocol.wave.model.wave.data.impl.EmptyWaveletSnapshot;
 import org.waveprotocol.wave.model.wave.data.impl.WaveViewDataImpl;
 import org.waveprotocol.wave.model.wave.data.impl.WaveletDataImpl;
 
-import java.util.Collection;
-
 
 /**
  * Utility class for serialising/deserialising model objects (and their
  * components) to/from their protocol buffer representations.
- *
+ * 
  * NOTE: This class is mirrored in the server. Any changes here should also be
  * made in
- * {@link org.waveprotocol.box.server.common.SnapshotSerializer}
- *
+ * {@link org.waveprotocol.android.service.common.common.SnapshotSerializer}
+ * 
  * @author Joseph Gentle (josephg@gmail.com)
+ * 
+ *         Modified version for using Gson objects in Android/Java client
  */
 public class SnapshotSerializer {
   private SnapshotSerializer() {
@@ -73,7 +75,7 @@ public class SnapshotSerializer {
    */
   public static WaveletSnapshot serializeWavelet(ReadableWaveletData wavelet,
       HashedVersion hashedVersion) {
-    WaveletSnapshot builder = WaveletSnapshotJsoImpl.create();
+    WaveletSnapshot builder = new WaveletSnapshotGsonImpl();
 
     builder.setWaveletId(ModernIdSerialiser.INSTANCE.serialiseWaveletId(wavelet.getWaveletId()));
     for (ParticipantId participant : wavelet.getParticipants()) {
@@ -139,7 +141,7 @@ public class SnapshotSerializer {
    * @return A snapshot of the given document
    */
   public static DocumentSnapshot serializeDocument(ReadableBlipData document) {
-    DocumentSnapshot builder = DocumentSnapshotJsoImpl.create();
+    DocumentSnapshot builder = new DocumentSnapshotGsonImpl();
 
     builder.setDocumentId(document.getId());
     builder.setDocumentOperation(WaveletOperationSerializer.serialize(

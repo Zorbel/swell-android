@@ -17,7 +17,14 @@
  * under the License.
  */
 
-package org.waveprotocol.box.webclient.common;
+package org.waveprotocol.android.service.common;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.waveprotocol.wave.communication.Blob;
 import org.waveprotocol.wave.communication.Codec;
@@ -32,16 +39,10 @@ import org.waveprotocol.wave.federation.ProtocolDocumentOperation.Component.Upda
 import org.waveprotocol.wave.federation.ProtocolHashedVersion;
 import org.waveprotocol.wave.federation.ProtocolWaveletDelta;
 import org.waveprotocol.wave.federation.ProtocolWaveletOperation;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl.AnnotationBoundaryJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl.ElementStartJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl.KeyValuePairJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl.KeyValueUpdateJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl.ReplaceAttributesJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolDocumentOperationJsoImpl.ComponentJsoImpl.UpdateAttributesJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolHashedVersionJsoImpl;
-import org.waveprotocol.wave.federation.jso.ProtocolWaveletOperationJsoImpl;
+import org.waveprotocol.wave.federation.gson.ProtocolDocumentOperationGsonImpl;
+import org.waveprotocol.wave.federation.gson.ProtocolDocumentOperationGsonImpl.ComponentGsonImpl;
+import org.waveprotocol.wave.federation.gson.ProtocolHashedVersionGsonImpl;
+import org.waveprotocol.wave.federation.gson.ProtocolWaveletOperationGsonImpl;
 import org.waveprotocol.wave.model.document.operation.AnnotationBoundaryMap;
 import org.waveprotocol.wave.model.document.operation.Attributes;
 import org.waveprotocol.wave.model.document.operation.AttributesUpdate;
@@ -64,17 +65,13 @@ import org.waveprotocol.wave.model.operation.wave.WaveletOperationContext;
 import org.waveprotocol.wave.model.version.HashedVersion;
 import org.waveprotocol.wave.model.wave.ParticipantId;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 /**
  * Utility class for serializing/deserializing wavelet operations (and their
  * components) to/from their protocol buffer representations (and their
  * components).
+ * 
+ * Modified version for using Gson objects in Android/Java client
+ * 
  */
 public class WaveletOperationSerializer {
   private WaveletOperationSerializer() {
@@ -87,7 +84,7 @@ public class WaveletOperationSerializer {
    * @return serialized protocol buffer wavelet operation
    */
   public static ProtocolWaveletOperation serialize(WaveletOperation waveletOp) {
-    ProtocolWaveletOperation protobufOp = ProtocolWaveletOperationJsoImpl.create();
+    ProtocolWaveletOperation protobufOp = new ProtocolWaveletOperationGsonImpl();
 
     if (waveletOp instanceof NoOp) {
       protobufOp.setNoOp(true);
@@ -98,7 +95,7 @@ public class WaveletOperationSerializer {
           .getAddress());
     } else if (waveletOp instanceof WaveletBlipOperation) {
       ProtocolWaveletOperation.MutateDocument mutation =
-          ProtocolWaveletOperationJsoImpl.MutateDocumentJsoImpl.create();
+ new ProtocolWaveletOperationGsonImpl.MutateDocumentGsonImpl();
       mutation.setDocumentId(((WaveletBlipOperation) waveletOp).getBlipId());
       mutation.setDocumentOperation(serialize(((WaveletBlipOperation) waveletOp).getBlipOp()));
       protobufOp.setMutateDocument(mutation);
@@ -123,7 +120,7 @@ public class WaveletOperationSerializer {
       output = serialize(((BlipContentOperation) blipOp).getContentOp());
     } else if (blipOp instanceof SubmitBlip) {
       // we don't support this operation here.
-      output = ProtocolDocumentOperationJsoImpl.create();
+      output = new ProtocolDocumentOperationGsonImpl();
     } else {
       throw new IllegalArgumentException("Unsupported operation type: " + blipOp);
     }
@@ -280,24 +277,24 @@ public class WaveletOperationSerializer {
    * @return serialized protocol buffer document operation
    */
   public static ProtocolDocumentOperation serialize(DocOp inputOp) {
-    final ProtocolDocumentOperation output = ProtocolDocumentOperationJsoImpl.create();
+    final ProtocolDocumentOperation output = new ProtocolDocumentOperationGsonImpl();
     inputOp.apply(new DocOpCursor() {
 
       private Component addComponent() {
-        ComponentJsoImpl component = ComponentJsoImpl.create();
+        ComponentGsonImpl component = new ComponentGsonImpl();
         output.addComponent(component);
         return component;
       }
 
       private KeyValuePair keyValuePair(String key, String value) {
-        KeyValuePair pair = KeyValuePairJsoImpl.create();
+        KeyValuePair pair = new ComponentGsonImpl.KeyValuePairGsonImpl();
         pair.setKey(key);
         pair.setValue(value);
         return pair;
       }
 
       private KeyValueUpdate keyValueUpdate(String key, String oldValue, String newValue) {
-        KeyValueUpdate kvu = KeyValueUpdateJsoImpl.create();
+        KeyValueUpdate kvu = new ComponentGsonImpl.KeyValueUpdateGsonImpl();
         kvu.setKey(key);
         if (oldValue != null) {
           kvu.setOldValue(oldValue);
@@ -334,7 +331,7 @@ public class WaveletOperationSerializer {
       }
 
       private ElementStart makeElementStart(String type, Attributes attributes) {
-        ElementStart e = ElementStartJsoImpl.create();
+        ElementStart e = new ComponentGsonImpl.ElementStartGsonImpl();
         e.setType(type);
         for (String name : attributes.keySet()) {
           e.addAttribute(keyValuePair(name, attributes.get(name)));
@@ -354,7 +351,7 @@ public class WaveletOperationSerializer {
 
       @Override
       public void replaceAttributes(Attributes oldAttributes, Attributes newAttributes) {
-        ReplaceAttributes r = ReplaceAttributesJsoImpl.create();
+        ReplaceAttributes r = new ComponentGsonImpl.ReplaceAttributesGsonImpl();
         if (oldAttributes.isEmpty() && newAttributes.isEmpty()) {
           r.setEmpty(true);
         } else {
@@ -371,7 +368,7 @@ public class WaveletOperationSerializer {
 
       @Override
       public void updateAttributes(AttributesUpdate attributes) {
-        UpdateAttributes u = UpdateAttributesJsoImpl.create();
+        UpdateAttributes u = new ComponentGsonImpl.UpdateAttributesGsonImpl();
         if (attributes.changeSize() == 0) {
           u.setEmpty(true);
         } else {
@@ -385,7 +382,7 @@ public class WaveletOperationSerializer {
 
       @Override
       public void annotationBoundary(AnnotationBoundaryMap map) {
-        AnnotationBoundary a = AnnotationBoundaryJsoImpl.create();
+        AnnotationBoundary a = new ComponentGsonImpl.AnnotationBoundaryGsonImpl();
         if (map.endSize() == 0 && map.changeSize() == 0) {
           a.setEmpty(true);
         } else {
@@ -408,7 +405,7 @@ public class WaveletOperationSerializer {
    */
   public static ProtocolHashedVersion serialize(HashedVersion hashedVersion) {
     Blob b64Hash = new Blob(Codec.encode(hashedVersion.getHistoryHash()));
-    ProtocolHashedVersion version = ProtocolHashedVersionJsoImpl.create();
+    ProtocolHashedVersion version = new ProtocolHashedVersionGsonImpl();
     version.setVersion(hashedVersion.getVersion());
     version.setHistoryHash(b64Hash);
     return version;

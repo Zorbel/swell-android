@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.waveprotocol.box.webclient.client;
+package org.waveprotocol.android.service;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,21 +25,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.waveprotocol.android.service.common.WaveletOperationSerializer;
 import org.waveprotocol.box.common.comms.DocumentSnapshot;
 import org.waveprotocol.box.common.comms.ProtocolSubmitResponse;
 import org.waveprotocol.box.common.comms.ProtocolWaveletUpdate;
 import org.waveprotocol.box.common.comms.WaveletSnapshot;
 import org.waveprotocol.box.common.comms.gson.ProtocolSubmitRequestGsonImpl;
-import org.waveprotocol.box.common.comms.jso.ProtocolWaveletUpdateJsoImpl;
+import org.waveprotocol.box.common.comms.gson.ProtocolWaveletUpdateGsonImpl;
 import org.waveprotocol.box.stat.AsyncCallContext;
-import org.waveprotocol.box.webclient.common.WaveletOperationSerializer;
 import org.waveprotocol.wave.client.common.util.ClientPercentEncoderDecoder;
 import org.waveprotocol.wave.client.events.Log;
 import org.waveprotocol.wave.concurrencycontrol.channel.WaveViewService;
 import org.waveprotocol.wave.concurrencycontrol.common.ResponseCode;
 import org.waveprotocol.wave.federation.ProtocolHashedVersion;
 import org.waveprotocol.wave.federation.ProtocolWaveletDelta;
-import org.waveprotocol.wave.federation.jso.ProtocolWaveletDeltaJsoImpl;
+import org.waveprotocol.wave.federation.gson.ProtocolWaveletDeltaGsonImpl;
 import org.waveprotocol.wave.model.document.operation.DocInitialization;
 import org.waveprotocol.wave.model.document.operation.impl.DocOpUtil;
 import org.waveprotocol.wave.model.id.IdFilter;
@@ -114,7 +114,9 @@ public final class RemoteWaveViewService implements WaveViewService, WaveWebSock
     @Override
     public List<TransformedWaveletDelta> getDeltaList() {
       return deltas == null //
-          ? deltas = deserialize(update.getAppliedDelta(), update.getResultingVersion()) : deltas;
+      ? deltas = deserialize(update.getAppliedDelta(),
+          update.hasResultingVersion() ? update.getResultingVersion() : null)
+          : deltas; // Added checking update.hasResultingVersion() to avoid NPE
     }
 
     @Override
@@ -309,7 +311,7 @@ public final class RemoteWaveViewService implements WaveViewService, WaveWebSock
       if (update.hasChannelId()
           && (update.hasCommitNotice() || update.hasMarker() || update.hasSnapshot() || update
               .getAppliedDeltaSize() > 0)) {
-        ProtocolWaveletUpdate fake = ProtocolWaveletUpdateJsoImpl.create();
+        ProtocolWaveletUpdate fake = new ProtocolWaveletUpdateGsonImpl();
         fake.setChannelId(update.getChannelId());
         update.clearChannelId();
         callback.onUpdate(deserialize(fake));
@@ -344,7 +346,7 @@ public final class RemoteWaveViewService implements WaveViewService, WaveWebSock
   //
 
   private ProtocolWaveletDelta serialize(WaveletName wavelet, WaveletDelta delta) {
-    ProtocolWaveletDeltaJsoImpl protocolDelta = ProtocolWaveletDeltaJsoImpl.create();
+    ProtocolWaveletDeltaGsonImpl protocolDelta = new ProtocolWaveletDeltaGsonImpl();
     for (WaveletOperation op : delta) {
       protocolDelta.addOperation(WaveletOperationSerializer.serialize(op));
     }

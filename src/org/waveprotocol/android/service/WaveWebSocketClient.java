@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package org.waveprotocol.box.webclient.client;
+package org.waveprotocol.android.service;
 
 import java.util.Queue;
 
-import org.waveprotocol.android.service.ProtoSerializer;
 import org.waveprotocol.box.common.comms.gson.ProtocolAuthenticateGsonImpl;
 import org.waveprotocol.box.common.comms.gson.ProtocolOpenRequestGsonImpl;
 import org.waveprotocol.box.common.comms.gson.ProtocolSubmitRequestGsonImpl;
@@ -47,6 +46,17 @@ import com.google.gwt.core.client.Scheduler.RepeatingCommand;
  * Wrapper around WebSocket that handles the Wave client-server protocol.
  */
 public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
+
+  public interface ConnectionListener {
+
+    public void onConnect();
+
+    public void onReconnect();
+
+    public void onDisconnect();
+
+  }
+
   private static final int MAX_INITIAL_FAILURES = 2;
   private static final Log LOG = Log.get(WaveWebSocketClient.class);
   private static final int RECONNECT_TIME_MS = 5000;
@@ -140,13 +150,12 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
   private final String httpSessionId;
 
   private final Gson gson = new Gson();
-  private final ProtoSerializer serializer;
+
+  private ConnectionListener connectionListener = null;
 
   public WaveWebSocketClient(String urlBase, String httpSessionId) {
     this.httpSessionId = httpSessionId;
     this.urlBase = urlBase;
-
-    serializer = new ProtoSerializer();
 
     submitRequestCallbacks = CollectionUtils.createIntMap();
     socket = WaveSocketFactory.create(false, urlBase, httpSessionId, this);
@@ -166,7 +175,9 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
   /**
    * Opens this connection.
    */
-  public void connect() {
+  public void connect(ConnectionListener listener) {
+
+    connectionListener = listener;
 
     if (socket == null) {
       socket = WaveSocketFactory.create(true, urlBase, httpSessionId, WaveWebSocketClient.this);
@@ -185,13 +196,13 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
 
   @Override
   public void onConnect() {
+
     connected = ConnectState.CONNECTED;
-    connectedAtLeastOnce = true;
 
     // Sends the session cookie to the server via an RPC to work around browser bugs.
     // See: http://code.google.com/p/wave-protocol/issues/detail?id=119
 
-    if (httpSessionId != null) {
+    if (httpSessionId != null && !connectedAtLeastOnce) {
       ProtocolAuthenticateGsonImpl auth = new ProtocolAuthenticateGsonImpl();
       auth.setToken(httpSessionId);
       sendMessage(sequenceNo++, "ProtocolAuthenticate", auth.toGson(null, null));
@@ -201,11 +212,23 @@ public class WaveWebSocketClient implements WaveSocket.WaveSocketCallback {
     while (!messages.isEmpty() && connected == ConnectState.CONNECTED) {
       send(messages.poll());
     }
+
+    if (connectionListener != null)
+      if (!connectedAtLeastOnce)
+        connectionListener.onConnect();
+      else
+        connectionListener.onReconnect();
+
+    connectedAtLeastOnce = true;
+
   }
 
   @Override
   public void onDisconnect() {
     connected = ConnectState.DISCONNECTED;
+
+    if (connectionListener != null)
+      connectionListener.onDisconnect();
   }
 
   @Override

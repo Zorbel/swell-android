@@ -2,8 +2,21 @@ package org.waveprotocol.android.service;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.waveprotocol.box.webclient.client.WaveWebSocketClient;
+import org.waveprotocol.android.service.WaveWebSocketClient.ConnectionListener;
+import org.waveprotocol.box.webclient.client.SimpleWaveStore;
+import org.waveprotocol.box.webclient.search.WaveStore;
+import org.waveprotocol.wave.model.document.WaveContext;
+import org.waveprotocol.wave.model.extended.id.IdGeneratorExtended;
+import org.waveprotocol.wave.model.extended.id.IdGeneratorExtendedImpl;
+import org.waveprotocol.wave.model.id.IdGeneratorImpl;
+import org.waveprotocol.wave.model.id.WaveId;
+import org.waveprotocol.wave.model.wave.InvalidParticipantAddress;
+import org.waveprotocol.wave.model.wave.ParticipantId;
+import org.waveprotocol.wave.model.waveref.WaveRef;
 
 import android.app.Service;
 import android.content.Intent;
@@ -17,6 +30,12 @@ public class WaveService extends Service {
   public interface WaveServiceCallback {
 
     public void onLogin();
+
+    public void onConnect();
+
+    public void onReconnect();
+
+    public void onDisconnect();
 
     public void onError(String message);
 
@@ -37,12 +56,23 @@ public class WaveService extends Service {
   private WaveServiceCallback mCallback;
   private WaveBinder mBinder = new WaveBinder();
 
+
+  private String webSocketUrl; // TODO dont' build socket url in this class
+
+  private URL serverUrl;
+  private String waveDomain;
+
   private String sessionId = null;
-  private URL httpUrl;
-  private String webSocketUrl;
-  private String username;
+  private ParticipantId participantId = null;
 
   private WaveWebSocketClient webSocketClient = null;
+  private RemoteViewServiceMultiplexer channel;
+
+  private String seed;
+  private IdGeneratorExtended idGenerator;
+
+  private WaveStore waveStore;
+  private Map<WaveRef, WaveLoader> loaderStore;
 
 
   private class LoginTask extends AsyncTask<String, Void, String> {
@@ -60,19 +90,31 @@ public class WaveService extends Service {
     protected void onPostExecute(String result) {
 
       if (result != null) {
+
         sessionId = result;
+        waveDomain = participantId.getDomain();
+
         mCallback.onLogin();
+
       } else {
+
         sessionId = null;
+        participantId = null;
+        waveDomain = null;
+
         mCallback.onError("Wave Login Error");
+
       }
 
     }
 
   }
 
+
   @Override
   public void onCreate() {
+
+    loaderStore = new HashMap<WaveRef, WaveLoader>();
 
   }
 
@@ -87,7 +129,9 @@ public class WaveService extends Service {
     return mBinder;
   }
 
-
+  public IdGeneratorExtended getIdGenerator() {
+    return idGenerator;
+  }
 
   //
   // Public service interface
@@ -95,22 +139,28 @@ public class WaveService extends Service {
 
   public void login(String host, String username, String password) throws MalformedURLException {
 
-    this.username = username;
 
-    httpUrl = new URL(host);
-    webSocketUrl = httpUrl.getProtocol() + "://" + httpUrl.getHost() + ":" + httpUrl.getPort()
+    serverUrl = new URL(host);
+    // TODO move URL build to WaveSocketWasync class
+    webSocketUrl = serverUrl.getProtocol() + "://" + serverUrl.getHost() + ":"
+        + serverUrl.getPort()
         + "/atmosphere";
 
-    // (httpUrl.getProtocol().equals("https") ? "wss://" : "ws://") +
-    // httpUrl.getHost() + ":" + httpUrl.getPort() + "/atmosphere";
+    try {
+      participantId = ParticipantId.of(username);
+    } catch (InvalidParticipantAddress e) {
 
-    new LoginTask().execute(httpUrl.toString(), username, password);
+      mCallback.onError(e.getMessage());
+      return;
+    }
+
+    new LoginTask().execute(serverUrl.toString(), participantId.toString(), password);
 
   }
 
 
   public boolean isLoggedIn() {
-    return sessionId != null;
+    return sessionId != null && participantId != null;
   }
 
   public void connect() {
@@ -119,23 +169,109 @@ public class WaveService extends Service {
       return; // TODO(pablojan) handle no login in better way
     }
 
-    webSocketClient = new WaveWebSocketClient(webSocketUrl, sessionId);
-    webSocketClient.connect();
+    seed = sessionId; // TODO double-check seed usage
+    waveStore = new SimpleWaveStore();
 
-    // channel = new RemoteViewServiceMultiplexer(websocket,
-    // loggedInUser.getAddress());
-    // idGenerator = new IdGeneratorExtendedImpl(ClientIdGenerator.create());
-    // seed = Session.get().getIdSeed();
-    //
-    // waveContentManager = WaveContentManager.create(waveStore,
-    // waveServerDomain, idGenerator,
-    // loggedInUser, seed, channel);
+    idGenerator = new IdGeneratorExtendedImpl(new IdGeneratorImpl(participantId.getDomain(),
+        new IdGeneratorImpl.Seed() {
+
+          @Override
+          public String get() {
+            return seed;
+          }
+
+        }));
+
+    webSocketClient = new WaveWebSocketClient(webSocketUrl, sessionId);
+    webSocketClient.connect(new ConnectionListener() {
+
+      @Override
+      public void onDisconnect() {
+        mCallback.onDisconnect();
+      }
+
+      @Override
+      public void onConnect() {
+        mCallback.onConnect();
+      }
+
+      @Override
+      public void onReconnect() {
+        mCallback.onReconnect();
+      }
+    });
+
+    channel = new RemoteViewServiceMultiplexer(webSocketClient, participantId.getAddress());
+
+
+
 
   }
 
 
+  public WaveContext openWave(String waveId) {
+
+    WaveRef waveRef = WaveRef.of(WaveId.deserialise(waveId));
+
+    WaveLoader loader = WaveLoader.create(false, waveRef, channel, participantId,
+        Collections.<ParticipantId> emptySet(), idGenerator, null);
+    WaveContext wave = loader.getWaveContext();
+
+    if (wave != null) {
+      waveStore.add(wave);
+      loaderStore.put(waveRef, loader);
+    }
+
+    return wave;
+  }
+
+  public WaveContext createWave(String waveId) {
+
+    WaveRef waveRef = WaveRef.of(WaveId.deserialise(waveId));
+
+    WaveLoader loader = WaveLoader.create(true, waveRef, channel, participantId,
+        Collections.<ParticipantId> emptySet(), idGenerator, null);
+    WaveContext wave = loader.getWaveContext();
+
+    if (wave != null) {
+      waveStore.add(wave);
+      loaderStore.put(waveRef, loader);
+    }
+
+    return wave;
+  }
+
+
+  public void closeWave(String waveId) {
+
+    WaveRef waveRef = WaveRef.of(WaveId.deserialise(waveId));
+
+    WaveLoader loader = loaderStore.get(waveRef);
+
+    if (loader == null)
+      return;
+
+    loader.close();
+
+    waveStore.remove(loader.getWaveContext());
+    loaderStore.remove(waveRef);
+  }
+
   public void disconnect() {
 
+    waveStore = null;
+    idGenerator = null;
+
+    channel = null;
+    webSocketClient = null;
+    seed = null;
+
+  }
+
+  public void logout() {
+    sessionId = null;
+    participantId = null;
+    waveDomain = null;
   }
 
 }

@@ -1,4 +1,4 @@
-package org.waveprotocol.box.webclient.client;
+package org.waveprotocol.android.service;
 
 import java.io.IOException;
 
@@ -42,7 +42,24 @@ public class WaveSocketWAsync implements WaveSocket {
         callback.onDisconnect();
         break;
       case EVENT_ON_MESSAGE:
-        callback.onMessage((String) msg.obj);
+
+        String str = (String) msg.obj;
+
+        if (str.indexOf('|') == 0) {
+
+          while (str.indexOf('|') == 0 && str.length() > 1) {
+
+            str = str.substring(1);
+            int marker = str.indexOf("}|");
+            callback.onMessage(str.substring(0, marker + 1));
+            str = str.substring(marker + 1);
+
+          }
+
+        } else {
+          callback.onMessage(str);
+        }
+
         break;
       case EVENT_ON_EXCEPTION:
         callback.onDisconnect();
@@ -95,7 +112,8 @@ public class WaveSocketWAsync implements WaveSocket {
       AtmosphereRequestBuilder requestBuilder = client.newRequestBuilder()
           .method(Request.METHOD.GET).trackMessageLength(true).uri(WaveSocketWAsync.this.urlBase)
           // UrlBase
-          .transport(Request.TRANSPORT.WEBSOCKET).transport(Request.TRANSPORT.LONG_POLLING)
+          // .transport(Request.TRANSPORT.WEBSOCKET)
+          .transport(Request.TRANSPORT.LONG_POLLING)
           .header("Cookie", "WSESSIONID=" + sessionId);
 
       WaveSocketWAsync.this.socket = client
@@ -118,6 +136,17 @@ public class WaveSocketWAsync implements WaveSocket {
 
               Message msg = uiHandler.obtainMessage();
               msg.arg1 = EVENT_ON_CLOSE;
+              uiHandler.sendMessage(msg);
+
+            }
+
+          }).on(Event.REOPENED.name(), new Function<String>() {
+
+            @Override
+            public void on(String arg0) {
+
+              Message msg = uiHandler.obtainMessage();
+              msg.arg1 = EVENT_ON_OPEN;
               uiHandler.sendMessage(msg);
 
             }
