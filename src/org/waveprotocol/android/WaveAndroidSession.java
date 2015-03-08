@@ -1,7 +1,5 @@
 package org.waveprotocol.android;
 
-import org.waveprotocol.android.client.WaveAndroidClient;
-
 import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
@@ -11,7 +9,6 @@ public class WaveAndroidSession extends Activity {
   private String user;
   private String password;
   private String server;
-  private WaveAndroidClient waveClient;
 
   private Context context;
 
